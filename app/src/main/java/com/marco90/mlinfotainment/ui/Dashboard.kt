@@ -68,9 +68,11 @@ fun Dashboard(onOpenSettings: () -> Unit) {
             if (e == Lifecycle.Event.ON_START) {
                 SpeedRepo.start(ctx)
                 MusicRepo.start(ctx)
+                WidgetHost.start(ctx)
                 permTick++
             } else if (e == Lifecycle.Event.ON_STOP) {
                 SpeedRepo.stop()
+                WidgetHost.stop(ctx)
             }
         }
         owner.lifecycle.addObserver(obs)
@@ -106,7 +108,7 @@ fun Dashboard(onOpenSettings: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val left = modules.filter { it == Module.NAV || it == Module.APPS }
-                    val right = modules.filter { it == Module.SPEED || it == Module.MUSIC || it == Module.WEATHER }
+                    val right = modules.filter { it == Module.SPEED || it == Module.MUSIC || it == Module.WEATHER || it == Module.WIDGETS }
                     if (left.isNotEmpty()) {
                         Column(Modifier.weight(1.5f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             left.forEach { m ->
@@ -142,6 +144,7 @@ fun Dashboard(onOpenSettings: () -> Unit) {
                             m == Module.SPEED -> base.height(124.dp)
                             m == Module.MUSIC -> base.height(104.dp)
                             m == Module.WEATHER -> base.height(88.dp)
+                            m == Module.WIDGETS -> base.height(170.dp)
                             else -> base.height(210.dp)
                         }
                         ModuleView(m, mod, a)
@@ -173,6 +176,7 @@ private fun ModuleView(m: Module, modifier: Modifier, a: DashActions) {
         Module.MUSIC -> MusicCard(modifier)
         Module.WEATHER -> WeatherCard(modifier)
         Module.APPS -> AppsCard(modifier, a)
+        Module.WIDGETS -> WidgetsCard(modifier)
     }
 }
 

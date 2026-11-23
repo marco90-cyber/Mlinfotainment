@@ -12,7 +12,8 @@ enum class Module(val key: String, val title: String) {
     SPEED("speed", "Velocità e orologio"),
     MUSIC("music", "Musica"),
     WEATHER("weather", "Meteo"),
-    APPS("apps", "App preferite")
+    APPS("apps", "App preferite"),
+    WIDGETS("widgets", "Widget")
 }
 
 /** Le scelte di MLinfotainment (il tema è in MLTheme). Si salvano da sole e fanno aggiornare la schermata. */
@@ -68,6 +69,7 @@ class CarSettings private constructor(ctx: Context) {
     private var moduleOrder by str("moduleOrder", "nav,speed,music,weather,apps")
     private var modulesOff by str("modulesOff", "")
     private var favApps by str("favApps", "")
+    private var widgetIds by str("widgetIds", "")
 
     var lastAutoLaunch: Long
         get() = sp.getLong("lastAutoLaunch", 0L)
@@ -80,6 +82,25 @@ class CarSettings private constructor(ctx: Context) {
     var favList: List<String>
         get() = favApps.split(",").filter { it.isNotBlank() }
         set(v) { favApps = v.joinToString(",") }
+
+    val widgetList: List<Int>
+        get() = widgetIds.split(",").mapNotNull { it.toIntOrNull() }
+
+    fun addWidget(id: Int) {
+        widgetIds = (widgetList + id).distinct().joinToString(",")
+    }
+
+    fun removeWidget(id: Int) {
+        widgetIds = widgetList.filter { it != id }.joinToString(",")
+    }
+
+    /** Il modulo Widget è nuovo: per chi aveva già l'app parte spento. */
+    fun migrate() {
+        if (!sp.getBoolean("widgetsInit", false)) {
+            setEnabled(Module.WIDGETS, false)
+            sp.edit().putBoolean("widgetsInit", true).apply()
+        }
+    }
 
     val orderedModules: List<Module>
         get() {
@@ -112,7 +133,7 @@ class CarSettings private constructor(ctx: Context) {
         @Volatile private var instance: CarSettings? = null
         fun get(ctx: Context): CarSettings =
             instance ?: synchronized(this) {
-                instance ?: CarSettings(ctx.applicationContext).also { instance = it }
+                instance ?: CarSettings(ctx.applicationContext).also { it.migrate(); instance = it }
             }
     }
 }

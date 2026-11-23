@@ -46,6 +46,7 @@ fun SettingsHost(onClose: () -> Unit) {
     BackHandler { if (page == "root") onClose() else page = "root" }
     when (page) {
         "modules" -> ModulesPage { page = "root" }
+        "widgets" -> WidgetsPage { page = "root" }
         "signals" -> SignalsPage { page = "root" }
         "perms" -> PermissionsPage { page = "root" }
         "probe" -> EmbedProbePage { page = "root" }
@@ -59,6 +60,7 @@ private fun moduleIcon(m: Module): ImageVector = when (m) {
     Module.MUSIC -> Icons.Rounded.MusicNote
     Module.WEATHER -> Icons.Rounded.Cloud
     Module.APPS -> Icons.Rounded.Apps
+    Module.WIDGETS -> Icons.Rounded.Widgets
 }
 
 private fun signalsSummary(s: CarSettings): String {
@@ -89,6 +91,7 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
         }
         MLGroup("Schermata") {
             MLNavRow("Moduli", "Cosa mostrare e in che ordine", icon = Icons.Rounded.Widgets) { go("modules") }
+            MLNavRow("Widget", "Maps, Spotify e gli altri widget di sistema", icon = Icons.Rounded.Widgets) { go("widgets") }
             MLNavRow("App preferite", "Fino a 4, in grande", icon = Icons.Rounded.Apps) { showFav = true }
             MLChoiceRow(
                 "Navigatore",
@@ -269,4 +272,33 @@ private fun BtDevicesDialog(onDismiss: () -> Unit) {
         confirmButton = { TextButton(onClick = { s.btList = sel; onDismiss() }) { Text("Fine") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } }
     )
+}
+
+@Composable
+private fun WidgetsPage(onBack: () -> Unit) {
+    val ctx = LocalContext.current
+    val s = remember { CarSettings.get(ctx) }
+    val add = rememberWidgetAdder()
+    MLSettingsScaffold("Widget", onBack) {
+        MLGroup("Nella schermata") {
+            s.widgetList.forEach { id ->
+                MLNavRow(
+                    WidgetHost.label(ctx, id), null,
+                    icon = Icons.Rounded.Widgets,
+                    trailing = {
+                        IconButton(onClick = {
+                            try { WidgetHost.host(ctx).deleteAppWidgetId(id) } catch (e: Exception) { }
+                            s.removeWidget(id)
+                        }) { Icon(Icons.Rounded.Close, "Rimuovi") }
+                    }
+                ) { }
+            }
+            MLNavRow("Aggiungi un widget", "Scegli dall'elenco dei widget installati", icon = Icons.Rounded.Add) { add() }
+        }
+        MLGroup("Mostra") {
+            MLSwitchRow("Modulo Widget", "Accanto agli altri moduli", s.enabled(Module.WIDGETS), icon = Icons.Rounded.Widgets) {
+                s.setEnabled(Module.WIDGETS, it)
+            }
+        }
+    }
 }
