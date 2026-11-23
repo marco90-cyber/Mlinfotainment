@@ -105,6 +105,10 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
                 s.workAddress.ifBlank { "Non impostato" },
                 icon = Icons.Rounded.Work
             ) { editing = "work" }
+            MLSwitchRow(
+                "Navigatore a fianco", "Divide lo schermo: schermata auto e navigatore affiancati",
+                s.sideBySide, icon = Icons.Rounded.Navigation
+            ) { s.sideBySide = it }
             MLChoiceRow("Unità di velocità", listOf("kmh" to "km/h", "mph" to "mph"), s.unit) { s.unit = it }
             MLSwitchRow("Schermo sempre acceso", "Mentre guidi", s.keepOn) { s.keepOn = it }
             MLSwitchRow("Schermo intero", "Nasconde le barre di sistema", s.immersive) { s.immersive = it }

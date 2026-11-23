@@ -31,6 +31,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.marco.mltheme.MLGroup
 import com.marco.mltheme.MLNavRow
 import com.marco.mltheme.MLSettingsScaffold
+import com.marco90.mlinfotainment.core.SplitService
 import com.marco90.mlinfotainment.core.Triggers
 import com.marco90.mlinfotainment.media.MusicRepo
 
@@ -63,6 +64,7 @@ fun PermissionsPage(onBack: () -> Unit) {
     val act = Build.VERSION.SDK_INT < 29 || granted(Manifest.permission.ACTIVITY_RECOGNITION)
     val overlay = Settings.canDrawOverlays(ctx)
     val listener = MusicRepo.hasAccess(ctx)
+    val split = SplitService.instance != null
     val battery = ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName)
 
     MLSettingsScaffold("Permessi", onBack) {
@@ -91,6 +93,11 @@ fun PermissionsPage(onBack: () -> Unit) {
             }
             PermRow(Icons.Rounded.Bolt, "Batteria senza limiti", "Evita che il sistema fermi i rilevatori", battery) {
                 openSystem(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+            }
+        }
+        MLGroup("Per il navigatore a fianco") {
+            PermRow(Icons.Rounded.Layers, "Servizio schermo diviso", "Accessibilità: serve solo a dividere lo schermo", split) {
+                openSystem(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
             }
         }
         MLGroup("Per la musica") {

@@ -1,9 +1,15 @@
 package com.marco90.mlinfotainment.ui
 
+import android.accessibilityservice.AccessibilityService
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
+import com.marco90.mlinfotainment.core.SplitService
+import com.marco90.mlinfotainment.data.CarSettings
 import com.marco90.mlinfotainment.media.MusicRepo
 
 data class Navigator(val key: String, val label: String, val pkg: String)
@@ -21,9 +27,8 @@ object Navigators {
     fun installed(ctx: Context, n: Navigator): Boolean =
         ctx.packageManager.getLaunchIntentForPackage(n.pkg) != null
 
-    /** [dest] = indirizzo da raggiungere; null = apre solo il navigatore. */
-    fun open(ctx: Context, n: Navigator, dest: String?) {
-        val intent: Intent? = if (dest.isNullOrBlank()) {
+    fun intentFor(ctx: Context, n: Navigator, dest: String?): Intent? =
+        if (dest.isNullOrBlank()) {
             ctx.packageManager.getLaunchIntentForPackage(n.pkg)
         } else {
             val q = Uri.encode(dest)
@@ -33,11 +38,38 @@ object Navigators {
                 else -> Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=$q")).setPackage(n.pkg)
             }
         }
+
+    /** [dest] = indirizzo da raggiungere; null = apre solo il navigatore. Rispetta "Navigatore a fianco". */
+    fun open(ctx: Context, n: Navigator, dest: String?) {
+        val intent = intentFor(ctx, n, dest)
         if (intent == null) {
             toast(ctx, "${n.label} non è installato")
             return
         }
-        start(ctx, intent, "Non riesco ad aprire ${n.label}")
+        if (CarSettings.get(ctx).sideBySide) {
+            openSideBySide(ctx, intent)
+        } else {
+            start(ctx, intent, "Non riesco ad aprire ${n.label}")
+        }
+    }
+
+    /** Divide lo schermo (con il servizio di accessibilità) e apre il navigatore nell'altra metà. */
+    private fun openSideBySide(ctx: Context, intent: Intent) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
+        val go = { start(ctx, intent, "Non riesco ad aprire il navigatore") }
+        val act = ctx as? Activity
+        if (act != null && act.isInMultiWindowMode) {
+            go()
+            return
+        }
+        val svc = SplitService.instance
+        if (svc != null) {
+            svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN)
+            Handler(Looper.getMainLooper()).postDelayed({ go() }, 700L)
+        } else {
+            toast(ctx, "Per l'affiancato attiva il servizio nei Permessi")
+            go()
+        }
     }
 }
 
