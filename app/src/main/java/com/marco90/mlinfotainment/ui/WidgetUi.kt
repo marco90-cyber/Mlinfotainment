@@ -184,7 +184,7 @@ fun WidgetsCard(modifier: Modifier) {
 }
 
 @Composable
-private fun WidgetView(id: Int, modifier: Modifier) {
+fun WidgetView(id: Int, modifier: Modifier) {
     val ctx = LocalContext.current
     val c = LocalAuto.current
     val info = remember(id) { try { WidgetHost.mgr(ctx).getAppWidgetInfo(id) } catch (e: Exception) { null } }

@@ -70,6 +70,8 @@ class CarSettings private constructor(ctx: Context) {
     private var modulesOff by str("modulesOff", "")
     private var favApps by str("favApps", "")
     private var widgetIds by str("widgetIds", "")
+    var layoutLand by str("layoutLand", "")
+    var layoutPort by str("layoutPort", "")
 
     var lastAutoLaunch: Long
         get() = sp.getLong("lastAutoLaunch", 0L)
@@ -87,11 +89,22 @@ class CarSettings private constructor(ctx: Context) {
         get() = widgetIds.split(",").mapNotNull { it.toIntOrNull() }
 
     fun addWidget(id: Int) {
+        setEnabled(Module.WIDGETS, true)
         widgetIds = (widgetList + id).distinct().joinToString(",")
     }
 
     fun removeWidget(id: Int) {
         widgetIds = widgetList.filter { it != id }.joinToString(",")
+    }
+
+    fun saveLayout(land: Boolean, cells: List<Cell>) {
+        val old = GridLayout.parse(if (land) layoutLand else layoutPort)
+        val enc = GridLayout.encode(old.filter { o -> cells.none { it.key == o.key } } + cells)
+        if (land) layoutLand = enc else layoutPort = enc
+    }
+
+    fun resetLayout(land: Boolean) {
+        if (land) layoutLand = "" else layoutPort = ""
     }
 
     /** Il modulo Widget è nuovo: per chi aveva già l'app parte spento. */

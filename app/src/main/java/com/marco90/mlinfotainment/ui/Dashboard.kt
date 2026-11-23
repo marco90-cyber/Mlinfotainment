@@ -2,6 +2,7 @@ package com.marco90.mlinfotainment.ui
 
 import android.Manifest
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -35,6 +36,7 @@ import com.marco90.mlinfotainment.BuildConfig
 import com.marco90.mlinfotainment.core.Triggers
 import com.marco90.mlinfotainment.embed.EmbeddedNav
 import com.marco90.mlinfotainment.data.CarSettings
+import com.marco90.mlinfotainment.data.GridLayout
 import com.marco90.mlinfotainment.data.Module
 import com.marco90.mlinfotainment.data.SpeedRepo
 import com.marco90.mlinfotainment.data.WeatherRepo
@@ -49,6 +51,7 @@ class DashActions(
     val allApps: () -> Unit,
     val pickFav: () -> Unit,
     val askLocation: () -> Unit,
+    val edit: () -> Unit,
     val hasLocation: Boolean
 )
 
@@ -58,6 +61,7 @@ fun Dashboard(onOpenSettings: () -> Unit) {
     val s = remember { CarSettings.get(ctx) }
     val c = LocalAuto.current
     val modules = s.activeModules
+    var edit by remember { mutableStateOf(false) }
     var showAll by remember { mutableStateOf(false) }
     var showFav by remember { mutableStateOf(false) }
     var permTick by remember { mutableIntStateOf(0) }
@@ -92,65 +96,24 @@ fun Dashboard(onOpenSettings: () -> Unit) {
         settings = onOpenSettings,
         allApps = { showAll = true },
         pickFav = { showFav = true },
+        edit = { edit = true },
         askLocation = {
             locLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         },
         hasLocation = hasLoc
     )
 
+    BackHandler(enabled = edit) { edit = false }
     BoxWithConstraints(Modifier.fillMaxSize().background(c.bg)) {
         val landscape = maxWidth > maxHeight
         if (landscape) {
             Row(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 Rail(a, vertical = true)
-                Row(
-                    Modifier.weight(1f).fillMaxHeight().padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    val left = modules.filter { it == Module.NAV || it == Module.APPS }
-                    val right = modules.filter { it == Module.SPEED || it == Module.MUSIC || it == Module.WEATHER || it == Module.WIDGETS }
-                    if (left.isNotEmpty()) {
-                        Column(Modifier.weight(1.5f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            left.forEach { m ->
-                                val w = if (m == Module.NAV || left.size == 1) 1f else 0.55f
-                                ModuleView(m, Modifier.fillMaxWidth().weight(w), a)
-                            }
-                        }
-                    }
-                    if (right.isNotEmpty()) {
-                        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            right.forEach { m -> ModuleView(m, Modifier.fillMaxWidth().weight(1f), a) }
-                        }
-                    }
-                    if (left.isEmpty() && right.isEmpty()) EmptyHint()
-                }
+                ModuleGrid(a, true, edit, { edit = it }, Modifier.weight(1f).fillMaxHeight().padding(6.dp))
             }
         } else {
-            val scroll = maxHeight < 640.dp
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                val colMod = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)
-                    .padding(12.dp)
-                Column(colMod, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val stretch = if (Module.NAV in modules) Module.NAV else modules.firstOrNull { it != Module.APPS }
-                    modules.forEach { m ->
-                        val base = Modifier.fillMaxWidth()
-                        val mod = when {
-                            m == Module.NAV && scroll -> base.height(210.dp)
-                            m == stretch && !scroll -> base.weight(1f)
-                            m == Module.APPS -> base.height(120.dp)
-                            m == Module.SPEED -> base.height(124.dp)
-                            m == Module.MUSIC -> base.height(104.dp)
-                            m == Module.WEATHER -> base.height(88.dp)
-                            m == Module.WIDGETS -> base.height(170.dp)
-                            else -> base.height(210.dp)
-                        }
-                        ModuleView(m, mod, a)
-                    }
-                    if (modules.isEmpty()) EmptyHint()
-                }
+                ModuleGrid(a, false, edit, { edit = it }, Modifier.weight(1f).fillMaxWidth().padding(6.dp))
                 Rail(a, vertical = false)
             }
         }
@@ -161,7 +124,7 @@ fun Dashboard(onOpenSettings: () -> Unit) {
 }
 
 @Composable
-private fun EmptyHint() {
+fun EmptyHint() {
     val c = LocalAuto.current
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text("Nessun modulo attivo. Aprilo dalle impostazioni.", color = c.sub, fontSize = 16.sp)
@@ -169,14 +132,18 @@ private fun EmptyHint() {
 }
 
 @Composable
-private fun ModuleView(m: Module, modifier: Modifier, a: DashActions) {
-    when (m) {
+fun ModuleView(key: String, modifier: Modifier, a: DashActions) {
+    if (GridLayout.isWidget(key)) {
+        key.substring(2).toIntOrNull()?.let { WidgetView(it, modifier) }
+        return
+    }
+    when (Module.entries.firstOrNull { it.key == key }) {
         Module.NAV -> NavCard(modifier)
         Module.SPEED -> SpeedCard(modifier, a)
         Module.MUSIC -> MusicCard(modifier)
         Module.WEATHER -> WeatherCard(modifier)
         Module.APPS -> AppsCard(modifier, a)
-        Module.WIDGETS -> WidgetsCard(modifier)
+        else -> {}
     }
 }
 
@@ -203,6 +170,7 @@ private fun Rail(a: DashActions, vertical: Boolean) {
         RailItem(Icons.Rounded.Phone, "Telefono") { openDialer(ctx) },
         RailItem(Icons.Rounded.MusicNote, "Musica") { openMusic(ctx) },
         RailItem(Icons.Rounded.Apps, "App") { a.allApps() },
+        RailItem(Icons.Rounded.Dashboard, "Layout") { a.edit() },
         RailItem(Icons.Rounded.Settings, "Impostazioni") { a.settings() }
     )
     if (vertical) {
@@ -223,7 +191,7 @@ private fun Rail(a: DashActions, vertical: Boolean) {
 private fun RailButton(item: RailItem) {
     val c = LocalAuto.current
     Column(
-        Modifier.clip(RoundedCornerShape(16.dp)).clickable { item.onClick() }.padding(horizontal = 10.dp, vertical = 8.dp),
+        Modifier.clip(RoundedCornerShape(16.dp)).clickable { item.onClick() }.padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(item.icon, item.label, tint = c.onCard, modifier = Modifier.size(30.dp))
