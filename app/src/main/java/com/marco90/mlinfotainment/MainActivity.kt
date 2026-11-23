@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import com.marco.mltheme.MLTheme
 import com.marco90.mlinfotainment.core.AppState
 import com.marco90.mlinfotainment.core.Triggers
+import com.marco90.mlinfotainment.embed.EmbedSupport
 import com.marco90.mlinfotainment.ui.AppRoot
 
 class MainActivity : ComponentActivity() {
@@ -15,6 +16,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent { MLTheme { AppRoot() } }
         Triggers.syncAll(this)
+        EmbedSupport.init(this)
     }
 
     override fun onStart() {

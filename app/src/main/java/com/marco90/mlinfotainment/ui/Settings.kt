@@ -33,7 +33,9 @@ import com.marco.mltheme.MLSettingsScaffold
 import com.marco.mltheme.MLSliderRow
 import com.marco.mltheme.MLSwitchRow
 import com.marco.mltheme.MLThemeSettingsGroup
+import com.marco90.mlinfotainment.BuildConfig
 import com.marco90.mlinfotainment.core.Triggers
+import com.marco90.mlinfotainment.embed.EmbedProbePage
 import com.marco90.mlinfotainment.data.CarSettings
 import com.marco90.mlinfotainment.data.Module
 
@@ -46,6 +48,7 @@ fun SettingsHost(onClose: () -> Unit) {
         "modules" -> ModulesPage { page = "root" }
         "signals" -> SignalsPage { page = "root" }
         "perms" -> PermissionsPage { page = "root" }
+        "probe" -> EmbedProbePage { page = "root" }
         else -> RootPage(onClose) { page = it }
     }
 }
@@ -105,6 +108,15 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
             MLChoiceRow("Unità di velocità", listOf("kmh" to "km/h", "mph" to "mph"), s.unit) { s.unit = it }
             MLSwitchRow("Schermo sempre acceso", "Mentre guidi", s.keepOn) { s.keepOn = it }
             MLSwitchRow("Schermo intero", "Nasconde le barre di sistema", s.immersive) { s.immersive = it }
+        }
+        if (BuildConfig.SYSTEM_BUILD) {
+            MLGroup("Navigatore incorporato (sperimentale)") {
+                MLSwitchRow(
+                    "Navigatore dentro la schermata", "Lo mostra nella scheda, invece del pulsante",
+                    s.embedNav, icon = Icons.Rounded.Navigation
+                ) { s.embedNav = it }
+                MLNavRow("Prova incorporamento", "Registro e prova, per capire cosa non va", icon = Icons.Rounded.Sensors) { go("probe") }
+            }
         }
         MLThemeSettingsGroup()
     }

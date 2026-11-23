@@ -31,7 +31,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.marco90.mlinfotainment.BuildConfig
 import com.marco90.mlinfotainment.core.Triggers
+import com.marco90.mlinfotainment.embed.EmbeddedNav
 import com.marco90.mlinfotainment.data.CarSettings
 import com.marco90.mlinfotainment.data.Module
 import com.marco90.mlinfotainment.data.SpeedRepo
@@ -234,6 +236,10 @@ private fun NavCard(modifier: Modifier) {
     val c = LocalAuto.current
     val nav = Navigators.byKey(s.navigator)
     val installed = Navigators.installed(ctx, nav)
+    if (BuildConfig.SYSTEM_BUILD && s.embedNav && installed) {
+        EmbeddedNav(modifier, nav.pkg) { }
+        return
+    }
     CardBox(modifier) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {

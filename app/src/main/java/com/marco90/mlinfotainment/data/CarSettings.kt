@@ -2,6 +2,7 @@ package com.marco90.mlinfotainment.data
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateOf
+import com.marco90.mlinfotainment.BuildConfig
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -46,7 +47,9 @@ class CarSettings private constructor(ctx: Context) {
     }
 
     // Avvio automatico
-    var autoStart by bool("autoStart", true)
+    // nella versione "Sistema" parte spenta, per non aprirsi insieme alla versione normale
+    var autoStart by bool("autoStart", !BuildConfig.SYSTEM_BUILD)
+    var embedNav by bool("embedNav", BuildConfig.SYSTEM_BUILD)
     var trigBt by bool("trigBt", true)
     var trigActivity by bool("trigActivity", true)
     var trigGps by bool("trigGps", true)

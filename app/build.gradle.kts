@@ -22,6 +22,13 @@ android {
     }
 
     signingConfigs {
+        create("platform") {
+            storeFile = file("../signing/platform.p12")
+            storePassword = "android"
+            keyAlias = "platform"
+            keyPassword = "android"
+            storeType = "pkcs12"
+        }
         if (hasReleaseKey) {
             create("release") {
                 storeFile = file(keystorePath!!)
@@ -35,11 +42,28 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+        }
+    }
+
+    // "normal" = versione per tutti i telefoni; "system" = versione sperimentale firmata con la chiave di test
+    // di Android (pubblica) per tablet e autoradio che la accettano: permette di incorporare il navigatore.
+    flavorDimensions += "dist"
+    productFlavors {
+        create("normal") {
+            dimension = "dist"
+            buildConfigField("boolean", "SYSTEM_BUILD", "false")
             signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }
+        }
+        create("system") {
+            dimension = "dist"
+            applicationIdSuffix = ".system"
+            versionNameSuffix = "-sistema"
+            buildConfigField("boolean", "SYSTEM_BUILD", "true")
+            signingConfig = signingConfigs.getByName("platform")
         }
     }
 
@@ -52,6 +76,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     lint {
         abortOnError = false
@@ -78,4 +103,7 @@ dependencies {
 
     // Serve solo per il tema XML Material3 della finestra
     implementation("com.google.android.material:material:1.12.0")
+
+    // Solo versione "Sistema": accesso alle API nascoste di Android per incorporare il navigatore
+    "systemImplementation"("org.lsposed.hiddenapibypass:hiddenapibypass:4.3")
 }

@@ -42,15 +42,19 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle :app:assembleRelease --no-daemon --stacktrace
+        run: gradle :app:assembleNormalRelease :app:assembleSystemRelease --no-daemon --stacktrace
 
       - name: Rinomina l'APK
-        run: cp app/build/outputs/apk/release/app-release.apk MLinfotainment.apk
+        run: |
+          cp app/build/outputs/apk/normal/release/app-normal-release.apk MLinfotainment.apk
+          cp app/build/outputs/apk/system/release/app-system-release.apk MLinfotainment-Sistema.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: MLinfotainment
-          path: MLinfotainment.apk
+          path: |
+            MLinfotainment.apk
+            MLinfotainment-Sistema.apk
 
       # Ogni build diventa una Release; l'ultima è sempre quella segnata come "Latest".
       - name: Pubblica la Release
@@ -58,7 +62,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="v1.0.${{ github.run_number }}"
-          gh release create "$TAG" MLinfotainment.apk \
+          gh release create "$TAG" MLinfotainment.apk MLinfotainment-Sistema.apk \
             --title "MLinfotainment $TAG" \
             --notes "Build automatica del commit ${GITHUB_SHA::7}" \
             --latest
