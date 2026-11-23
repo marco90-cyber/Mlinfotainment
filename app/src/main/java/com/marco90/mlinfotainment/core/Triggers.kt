@@ -15,9 +15,9 @@ import com.marco90.mlinfotainment.data.CarSettings
 
 /** Accende o spegne i rilevatori in base alle scelte e ai permessi. */
 object Triggers {
-    fun syncAll(ctx: Context) {
+    fun syncAll(ctx: Context, fromBackground: Boolean = false) {
         try { syncActivity(ctx) } catch (e: Exception) { }
-        try { DriveMonitorService.sync(ctx) } catch (e: Exception) { }
+        try { DriveMonitorService.sync(ctx, fromBackground) } catch (e: Exception) { }
     }
 
     private fun pending(app: Context): PendingIntent {

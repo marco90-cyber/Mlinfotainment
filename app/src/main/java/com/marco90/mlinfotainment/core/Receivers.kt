@@ -38,6 +38,6 @@ class DrivingTransitionReceiver : BroadcastReceiver() {
 /** Riaccende i rilevatori dopo l'avvio del telefono o un aggiornamento dell'app. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        Triggers.syncAll(context)
+        Triggers.syncAll(context, fromBackground = true)
     }
 }

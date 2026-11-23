@@ -89,14 +89,17 @@ class DriveMonitorService : Service() {
     companion object {
         private const val CHANNEL = "drive_monitor"
 
-        fun sync(ctx: Context) {
+        /** [fromBackground]: dopo riavvio o aggiornamento serve "Posizione sempre", altrimenti il servizio non parte. */
+        fun sync(ctx: Context, fromBackground: Boolean = false) {
             val app = ctx.applicationContext
             val s = CarSettings.get(app)
             val permitted = ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val bgOk = !fromBackground || Build.VERSION.SDK_INT < 29 ||
+                ContextCompat.checkSelfPermission(app, Manifest.permission.ACCESS_BACKGROUND_LOCATION) == PackageManager.PERMISSION_GRANTED
             val intent = Intent(app, DriveMonitorService::class.java)
-            if (s.autoStart && s.trigGps && permitted) {
+            if (s.autoStart && s.trigGps && permitted && bgOk) {
                 ContextCompat.startForegroundService(app, intent)
-            } else {
+            } else if (!fromBackground) {
                 app.stopService(intent)
             }
         }
