@@ -129,7 +129,7 @@ private fun WidgetPickerDialog(onDismiss: () -> Unit, onPick: (AppWidgetProvider
         WidgetHost.mgr(ctx).installedProviders
             .filter { it.widgetCategory and AppWidgetProviderInfo.WIDGET_CATEGORY_HOME_SCREEN != 0 }
             .map { info ->
-                val app = try { pm.getApplicationLabel(info.providerInfo.applicationInfo).toString() } catch (e: Exception) { "" }
+                val app = try { pm.getApplicationLabel(pm.getApplicationInfo(info.provider.packageName, 0)).toString() } catch (e: Exception) { "" }
                 Triple(info, app, info.loadLabel(pm))
             }
             .sortedWith(compareBy({ it.second.lowercase() }, { it.third.lowercase() }))
