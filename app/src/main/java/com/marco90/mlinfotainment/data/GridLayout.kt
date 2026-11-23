@@ -14,14 +14,13 @@ object GridLayout {
     fun minSize(key: String): Pair<Int, Int> = if (isWidget(key)) 2 to 2 else 3 to 2
 
     private fun defaults(land: Boolean): Map<String, Cell> =
-        if (land) listOf(
+        (if (land) listOf(
             Cell("nav", 0, 0, 7, 4), Cell("apps", 0, 4, 7, 2),
             Cell("speed", 7, 0, 5, 2), Cell("music", 7, 2, 5, 2), Cell("weather", 7, 4, 5, 2)
         ) else listOf(
             Cell("nav", 0, 0, 6, 4), Cell("speed", 0, 4, 6, 2), Cell("music", 0, 6, 6, 2),
             Cell("apps", 0, 8, 6, 2), Cell("weather", 0, 10, 6, 2)
-        )
-            .associateBy { it.key }
+        )).associateBy { it.key }
 
     fun parse(s: String): List<Cell> = s.split(";").mapNotNull { part ->
         val p = part.split(",")
