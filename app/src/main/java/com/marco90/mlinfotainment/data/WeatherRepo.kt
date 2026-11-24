@@ -16,6 +16,7 @@ data class WeatherState(
     val min: Int? = null,
     val max: Int? = null,
     val place: String? = null,
+    val placeInfo: String? = null,
     val failed: Boolean = false
 )
 
@@ -27,7 +28,9 @@ object WeatherRepo {
     suspend fun refresh(ctx: Context, lat: Double, lon: Double) {
         // la località si riprova a ogni giro finché non c'è; il meteo ogni 15 minuti
         val place = withContext(Dispatchers.IO) { placeName(ctx, lat, lon) }
-        if (place != null && place != state.value.place) state.value = state.value.copy(place = place)
+        if (place != state.value.place || placeLog != state.value.placeInfo) {
+            state.value = state.value.copy(place = place ?: state.value.place, placeInfo = if (place == null) placeLog else null)
+        }
         val now = System.currentTimeMillis()
         if (now - lastFetch < 15 * 60_000L && state.value.temp != null) return
         lastFetch = now
@@ -42,6 +45,7 @@ object WeatherRepo {
         }
     }
 
+    private var placeLog = ""
     private var placeKey = ""
     private var placeCache: String? = null
 
@@ -50,7 +54,9 @@ object WeatherRepo {
         val key = "${Math.round(lat * 20)}:${Math.round(lon * 20)}"
         if (key == placeKey && placeCache != null) return placeCache
         // prima il servizio del telefono, poi uno gratuito online
+        placeLog = ""
         try {
+            if (!Geocoder.isPresent()) placeLog += "Geocoder assente. "
             if (Geocoder.isPresent()) {
                 @Suppress("DEPRECATION")
                 val a = Geocoder(ctx.applicationContext, Locale.getDefault()).getFromLocation(lat, lon, 1)?.firstOrNull()
@@ -60,8 +66,9 @@ object WeatherRepo {
                     placeCache = n
                     return n
                 }
+                placeLog += "Geocoder vuoto. "
             }
-        } catch (e: Exception) { }
+        } catch (e: Exception) { placeLog += "Geocoder: ${e.javaClass.simpleName}. " }
         val name = osmName(lat, lon) ?: bigDataName(lat, lon)
         if (name != null) {
             placeKey = key
@@ -70,7 +77,7 @@ object WeatherRepo {
         return name ?: placeCache
     }
 
-    private fun getJson(u: String): JSONObject? = try {
+    private fun getJson(u: String, tag: String): JSONObject? = try {
         val conn = URL(u).openConnection() as HttpURLConnection
         conn.connectTimeout = 6000
         conn.readTimeout = 6000
@@ -81,12 +88,13 @@ object WeatherRepo {
             conn.disconnect()
         }
     } catch (e: Exception) {
+        placeLog += "$tag: ${e.javaClass.simpleName} ${e.message?.take(40) ?: ""}. "
         null
     }
 
     private fun osmName(lat: Double, lon: Double): String? {
         val j = getJson(
-            "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&accept-language=it&lat=$lat&lon=$lon"
+            "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&accept-language=it&lat=$lat&lon=$lon", "OSM"
         ) ?: return null
         val a = j.optJSONObject("address") ?: return null
         for (k in listOf("city", "town", "village", "municipality", "hamlet", "suburb", "county")) {
@@ -98,7 +106,7 @@ object WeatherRepo {
 
     private fun bigDataName(lat: Double, lon: Double): String? {
         val j = getJson(
-            "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it"
+            "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it", "BDC"
         ) ?: return null
         return j.optString("city").ifBlank { j.optString("locality") }.ifBlank { j.optString("principalSubdivision") }
             .takeIf { it.isNotBlank() }

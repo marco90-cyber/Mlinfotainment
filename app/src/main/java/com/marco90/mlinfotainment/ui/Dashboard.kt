@@ -471,6 +471,9 @@ private fun WeatherCard(modifier: Modifier) {
                     else if (w.place != null) "$label · ${w.place}" else label,
                     color = c.sub, fontSize = 14.sp, maxLines = 1
                 )
+                if (w.temp != null && w.place == null && !w.placeInfo.isNullOrBlank()) {
+                    Text("Località: ${w.placeInfo}", color = c.sub, fontSize = 10.sp, maxLines = 2)
+                }
             }
             if (w.min != null && w.max != null) {
                 Text("${w.min}° / ${w.max}°", color = c.sub, fontSize = 16.sp)
