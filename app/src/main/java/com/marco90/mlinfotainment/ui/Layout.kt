@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -130,6 +132,16 @@ private fun Pill(label: String, icon: ImageVector, primary: Boolean, onClick: ()
     }
 }
 
+/** Quanto il dito ha trascinato (in pixel) rispetto alla posizione di partenza. */
+private class DragState {
+    var dx by mutableFloatStateOf(0f)
+    var dy by mutableFloatStateOf(0f)
+    var dw by mutableFloatStateOf(0f)
+    var dh by mutableFloatStateOf(0f)
+    val active: Boolean get() = dx != 0f || dy != 0f || dw != 0f || dh != 0f
+    fun reset() { dx = 0f; dy = 0f; dw = 0f; dh = 0f }
+}
+
 @Composable
 private fun GridItem(
     cell: Cell,
@@ -146,10 +158,8 @@ private fun GridItem(
 ) {
     val c = LocalAuto.current
     val d = LocalDensity.current
-    var dx by remember { mutableFloatStateOf(0f) }
-    var dy by remember { mutableFloatStateOf(0f) }
-    var dw by remember { mutableFloatStateOf(0f) }
-    var dh by remember { mutableFloatStateOf(0f) }
+    val haptic = LocalHapticFeedback.current
+    val ds = remember { DragState() }
     val cur by rememberUpdatedState(cell)
     val oth by rememberUpdatedState(others)
     val cwNow by rememberUpdatedState(cwPx)
@@ -157,65 +167,84 @@ private fun GridItem(
     val colsNow by rememberUpdatedState(cols)
     val rowsNow by rememberUpdatedState(rows)
     val (minW, minH) = GridLayout.minSize(cell.key)
+    val moving by remember { derivedStateOf { ds.active } }
 
-    fun target(): Cell {
+    /** Dove finirebbe l'elemento se lo lasciassi adesso (sempre su celle libere). */
+    fun landing(): Cell? {
         val k = cur
         val cw = cwNow
         val ch = chNow
         val cl = colsNow
         val rw = rowsNow
-        return if (dw != 0f || dh != 0f) {
-            k.copy(
-                w = (k.w + (dw / cw).roundToInt()).coerceIn(minW, maxOf(minW, cl - k.x)),
-                h = (k.h + (dh / ch).roundToInt()).coerceIn(minH, maxOf(minH, rw - k.y))
+        if (ds.dw != 0f || ds.dh != 0f) {
+            val t = k.copy(
+                w = (k.w + (ds.dw / cw).roundToInt()).coerceIn(minW, maxOf(minW, cl - k.x)),
+                h = (k.h + (ds.dh / ch).roundToInt()).coerceIn(minH, maxOf(minH, rw - k.y))
             )
-        } else {
-            k.copy(
-                x = (k.x + (dx / cw).roundToInt()).coerceIn(0, maxOf(0, cl - k.w)),
-                y = (k.y + (dy / ch).roundToInt()).coerceIn(0, maxOf(0, rw - k.h))
-            )
+            var w = t.w
+            while (w >= minW) {
+                var h = t.h
+                while (h >= minH) {
+                    val cand = t.copy(w = w, h = h)
+                    if (oth.none { GridLayout.overlap(it, cand) }) return cand
+                    h--
+                }
+                w--
+            }
+            return null
         }
+        val t = k.copy(
+            x = (k.x + (ds.dx / cw).roundToInt()).coerceIn(0, maxOf(0, cl - k.w)),
+            y = (k.y + (ds.dy / ch).roundToInt()).coerceIn(0, maxOf(0, rw - k.h))
+        )
+        return if (oth.none { GridLayout.overlap(it, t) }) t else GridLayout.nearestFree(t, oth, cl, rw)
     }
-
-    fun reset() { dx = 0f; dy = 0f; dw = 0f; dh = 0f }
 
     fun commit() {
-        val t = target()
-        if (oth.none { GridLayout.overlap(it, t) }) onChange(t)
-        reset()
+        val l = landing()
+        if (l != null && l != cur) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onChange(l)
+        }
+        ds.reset()
     }
 
-    val moving = dx != 0f || dy != 0f || dw != 0f || dh != 0f
-    val valid = oth.none { GridLayout.overlap(it, target()) }
-    val wPx = maxOf(cell.w * cwPx + dw, minW * cwPx)
-    val hPx = maxOf(cell.h * chPx + dh, minH * chPx)
-    val shape = RoundedCornerShape(28.dp)
-
+    // La cella ferma (posizione della griglia); il contenuto si muove dentro, il dito lavora sulla cella ferma.
     Box(
         Modifier
             .zIndex(if (moving) 2f else 0f)
-            .offset { IntOffset((cell.x * cwPx + dx).roundToInt(), (cell.y * chPx + dy).roundToInt()) }
-            .size(with(d) { wPx.toDp() }, with(d) { hPx.toDp() })
+            .offset { IntOffset((cell.x * cwPx).roundToInt(), (cell.y * chPx).roundToInt()) }
+            .size(with(d) { (cell.w * cwPx).toDp() }, with(d) { (cell.h * chPx).toDp() })
             .padding(6.dp)
-            .then(if (!edit) Modifier.longPressFirst(onEnterEdit) else Modifier)
+            .then(
+                if (!edit) Modifier.longPressFirst {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onEnterEdit()
+                } else Modifier
+            )
     ) {
-        content(Modifier.fillMaxSize())
+        if (edit) Ghost(cell, ds, cwPx, chPx, ::landing)
+        Box(
+            Modifier
+                .fillMaxSize()
+                .offset { IntOffset(ds.dx.roundToInt(), ds.dy.roundToInt()) }
+        ) {
+            content(Modifier.fillMaxSize())
+            if (edit) EditFrame(ds, ::landing)
+        }
         if (edit) {
-            val bad = moving && !valid
+            ResizeOutline(cell, ds, cwPx, chPx, minW, minH)
             Box(
                 Modifier
                     .fillMaxSize()
-                    .clip(shape)
-                    .background(if (bad) Color.Red.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.18f))
-                    .border(2.dp, if (bad) Color.Red else c.accent, shape)
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragEnd = { commit() },
-                            onDragCancel = { reset() }
+                            onDragCancel = { ds.reset() }
                         ) { change, amt ->
                             change.consume()
-                            dx += amt.x
-                            dy += amt.y
+                            ds.dx += amt.x
+                            ds.dy += amt.y
                         }
                     }
             )
@@ -223,17 +252,17 @@ private fun GridItem(
                 Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp)
-                    .size(44.dp)
+                    .size(48.dp)
                     .clip(CircleShape)
                     .background(c.accent)
                     .pointerInput(Unit) {
                         detectDragGestures(
                             onDragEnd = { commit() },
-                            onDragCancel = { reset() }
+                            onDragCancel = { ds.reset() }
                         ) { change, amt ->
                             change.consume()
-                            dw += amt.x
-                            dh += amt.y
+                            ds.dw += amt.x
+                            ds.dh += amt.y
                         }
                     },
                 contentAlignment = Alignment.Center
@@ -252,4 +281,54 @@ private fun GridItem(
             }
         }
     }
+}
+
+/** Bordo e velo sull'elemento in modifica (rosso se non c'è posto). */
+@Composable
+private fun EditFrame(ds: DragState, landing: () -> Cell?) {
+    val c = LocalAuto.current
+    val shape = RoundedCornerShape(28.dp)
+    val bad = ds.active && landing() == null
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clip(shape)
+            .background(if (bad) Color.Red.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.15f))
+            .border(2.dp, if (bad) Color.Red else c.accent, shape)
+    )
+}
+
+/** Il rettangolo che mostra dove l'elemento si fermerà. */
+@Composable
+private fun Ghost(cell: Cell, ds: DragState, cwPx: Float, chPx: Float, landing: () -> Cell?) {
+    if (!ds.active) return
+    val l = landing() ?: return
+    val c = LocalAuto.current
+    val d = LocalDensity.current
+    val shape = RoundedCornerShape(28.dp)
+    Box(
+        Modifier
+            .offset { IntOffset(((l.x - cell.x) * cwPx).roundToInt(), ((l.y - cell.y) * chPx).roundToInt()) }
+            .wrapContentSize(Alignment.TopStart, unbounded = true)
+            .size(with(d) { (l.w * cwPx).toDp() - 12.dp }, with(d) { (l.h * chPx).toDp() - 12.dp })
+            .clip(shape)
+            .background(c.accent.copy(alpha = 0.25f))
+            .border(2.dp, c.accent, shape)
+    )
+}
+
+/** Il bordo che segue il dito mentre ridimensioni. */
+@Composable
+private fun ResizeOutline(cell: Cell, ds: DragState, cwPx: Float, chPx: Float, minW: Int, minH: Int) {
+    if (ds.dw == 0f && ds.dh == 0f) return
+    val c = LocalAuto.current
+    val d = LocalDensity.current
+    val w = maxOf(cell.w * cwPx + ds.dw, minW * cwPx)
+    val h = maxOf(cell.h * chPx + ds.dh, minH * chPx)
+    Box(
+        Modifier
+            .wrapContentSize(Alignment.TopStart, unbounded = true)
+            .size(with(d) { w.toDp() - 12.dp }, with(d) { h.toDp() - 12.dp })
+            .border(2.dp, c.accent, RoundedCornerShape(28.dp))
+    )
 }

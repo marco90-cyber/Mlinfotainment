@@ -227,7 +227,7 @@ private fun NavCard(modifier: Modifier) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         Modifier
-                            .weight(1.6f)
+                            .weight(1.3f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(18.dp))
                             .background(c.accent)
@@ -293,13 +293,13 @@ private fun DestChip(label: String, icon: ImageVector, modifier: Modifier, onCli
             .clip(RoundedCornerShape(18.dp))
             .background(c.cardHigh)
             .clickable { onClick() }
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
         Icon(icon, null, tint = c.onCard, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(label, color = c.onCard, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = c.onCard, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
     }
 }
 

@@ -27,7 +27,9 @@ fun AppRoot() {
         "dark" -> true
         else -> isSystemInDarkTheme()
     }
-    var settings by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
+    val onboarding = !s.onboardingDone
+    val settings = settingsOpen || onboarding
     val keepOn = s.keepOn
     val immersive = s.immersive
 
@@ -51,7 +53,8 @@ fun AppRoot() {
     }
 
     CompositionLocalProvider(LocalAuto provides (if (dark) DarkAuto else LightAuto)) {
-        if (settings) SettingsHost { settings = false }
-        else Dashboard { settings = true }
+        if (onboarding) OnboardingHost()
+        else if (settingsOpen) SettingsHost { settingsOpen = false }
+        else Dashboard { settingsOpen = true }
     }
 }

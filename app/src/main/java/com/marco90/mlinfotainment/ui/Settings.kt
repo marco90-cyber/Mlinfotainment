@@ -88,6 +88,7 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
                 MLNavRow("Segnali di avvio", signalsSummary(s), icon = Icons.Rounded.Sensors) { go("signals") }
             }
             MLNavRow("Permessi", "Posizione, Bluetooth, sopra altre app", icon = Icons.Rounded.Security) { go("perms") }
+            MLNavRow("Configurazione iniziale", "Rivedi permessi e prime scelte", icon = Icons.Rounded.Tune) { s.onboardingDone = false; onClose() }
         }
         MLGroup("Schermata") {
             MLNavRow("Moduli", "Cosa mostrare e in che ordine", icon = Icons.Rounded.Widgets) { go("modules") }
@@ -141,7 +142,7 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
 }
 
 @Composable
-private fun AddressDialog(title: String, initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+internal fun AddressDialog(title: String, initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var text by remember { mutableStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -227,7 +228,7 @@ private fun SignalsPage(onBack: () -> Unit) {
 }
 
 @Composable
-private fun BtDevicesDialog(onDismiss: () -> Unit) {
+internal fun BtDevicesDialog(onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val s = remember { CarSettings.get(ctx) }
     val allowed = Build.VERSION.SDK_INT < 31 ||

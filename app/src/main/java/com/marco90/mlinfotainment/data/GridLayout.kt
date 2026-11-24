@@ -33,6 +33,22 @@ object GridLayout {
 
     fun overlap(a: Cell, b: Cell) = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
 
+    /** La posizione libera più vicina a quella voluta (stessa misura), o null se non c'è spazio. */
+    fun nearestFree(t: Cell, others: List<Cell>, cols: Int, rows: Int): Cell? {
+        var best: Cell? = null
+        var bd = Int.MAX_VALUE
+        for (y in 0..maxOf(0, rows - t.h)) {
+            for (x in 0..maxOf(0, cols - t.w)) {
+                val c = t.copy(x = x, y = y)
+                if (others.none { overlap(it, c) }) {
+                    val d = (x - t.x) * (x - t.x) + (y - t.y) * (y - t.y)
+                    if (d < bd) { bd = d; best = c }
+                }
+            }
+        }
+        return best
+    }
+
     private fun clamp(c: Cell, cols: Int, rows: Int): Cell {
         val (mw, mh) = minSize(c.key)
         val w = c.w.coerceIn(mw, maxOf(mw, cols))

@@ -36,7 +36,7 @@ import com.marco90.mlinfotainment.core.Triggers
 import com.marco90.mlinfotainment.media.MusicRepo
 
 @Composable
-fun PermissionsPage(onBack: () -> Unit) {
+fun PermissionsPage(onBack: () -> Unit, title: String = "Permessi", footer: (@Composable () -> Unit)? = null) {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
     val owner = LocalLifecycleOwner.current
@@ -67,7 +67,16 @@ fun PermissionsPage(onBack: () -> Unit) {
     val split = SplitService.instance != null
     val battery = ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName)
 
-    MLSettingsScaffold("Permessi", onBack) {
+    MLSettingsScaffold(title, onBack) {
+        MLGroup("Rapido") {
+            PermRow(Icons.Rounded.Bolt, "Concedi i permessi base", "Posizione, Bluetooth, attività e notifiche in un colpo", loc && bt && act && notif) {
+                val l = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (Build.VERSION.SDK_INT >= 31) l.add(Manifest.permission.BLUETOOTH_CONNECT)
+                if (Build.VERSION.SDK_INT >= 29) l.add(Manifest.permission.ACTIVITY_RECOGNITION)
+                if (Build.VERSION.SDK_INT >= 33) l.add(Manifest.permission.POST_NOTIFICATIONS)
+                launcher.launch(l.toTypedArray())
+            }
+        }
         MLGroup("Per aprirsi da solo") {
             PermRow(Icons.Rounded.Layers, "Mostra sopra altre app", "Apre la schermata auto subito, senza toccare niente", overlay) {
                 openSystem(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")))
@@ -105,6 +114,7 @@ fun PermissionsPage(onBack: () -> Unit) {
                 openSystem(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             }
         }
+        footer?.invoke()
     }
 }
 
