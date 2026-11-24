@@ -71,6 +71,8 @@ class CarSettings private constructor(ctx: Context) {
     private var modulesOff by str("modulesOff", "")
     private var favApps by str("favApps", "")
     private var widgetIds by str("widgetIds", "")
+    private var placesRaw by str("places", "")
+    private var recentsRaw by str("recents", "")
     var layoutLand by str("layoutLand", "")
     var layoutPort by str("layoutPort", "")
 
@@ -96,6 +98,32 @@ class CarSettings private constructor(ctx: Context) {
 
     fun removeWidget(id: Int) {
         widgetIds = widgetList.filter { it != id }.joinToString(",")
+    }
+
+    /** Destinazioni preferite: (nome, indirizzo). */
+    val places: List<Pair<String, String>>
+        get() = placesRaw.split("\n").filter { it.isNotBlank() }.map {
+            val i = it.indexOf('|')
+            if (i < 0) it to it else it.substring(0, i) to it.substring(i + 1)
+        }
+
+    private fun clean(t: String) = t.replace('|', ' ').replace('\n', ' ').trim()
+
+    fun addPlace(name: String, addr: String) {
+        placesRaw = (places.map { "${it.first}|${it.second}" } + "${clean(name)}|${clean(addr)}").joinToString("\n")
+    }
+
+    fun removePlace(index: Int) {
+        placesRaw = places.filterIndexed { i, _ -> i != index }.joinToString("\n") { "${it.first}|${it.second}" }
+    }
+
+    val recents: List<String>
+        get() = recentsRaw.split("\n").filter { it.isNotBlank() }
+
+    fun pushRecent(addr: String) {
+        val a = clean(addr)
+        if (a.isBlank()) return
+        recentsRaw = (listOf(a) + recents.filter { it != a }).take(6).joinToString("\n")
     }
 
     fun saveLayout(land: Boolean, cells: List<Cell>) {

@@ -21,6 +21,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -62,6 +63,7 @@ fun Dashboard(onOpenSettings: () -> Unit) {
     val c = LocalAuto.current
     val modules = s.activeModules
     var edit by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf<String?>(null) }
     var showAll by remember { mutableStateOf(false) }
     var showFav by remember { mutableStateOf(false) }
     var permTick by remember { mutableIntStateOf(0) }
@@ -96,25 +98,29 @@ fun Dashboard(onOpenSettings: () -> Unit) {
         settings = onOpenSettings,
         allApps = { showAll = true },
         pickFav = { showFav = true },
-        edit = { edit = true },
+        edit = { page = null; edit = true },
         askLocation = {
             locLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         },
         hasLocation = hasLoc
     )
 
-    BackHandler(enabled = edit) { edit = false }
+    BackHandler(enabled = edit || page != null) { if (edit) edit = false else page = null }
     BoxWithConstraints(Modifier.fillMaxSize().background(c.bg)) {
         val landscape = maxWidth > maxHeight
         if (landscape) {
             Row(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                Rail(a, vertical = true)
-                ModuleGrid(a, true, edit, { edit = it }, Modifier.weight(1f).fillMaxHeight().padding(6.dp))
+                Rail(a, vertical = true, page = page) { page = if (page == it) null else it }
+                val pg = page
+                if (pg != null) PageHost(pg, Modifier.weight(1f).fillMaxHeight())
+                else ModuleGrid(a, true, edit, { edit = it }, Modifier.weight(1f).fillMaxHeight().padding(6.dp))
             }
         } else {
             Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
-                ModuleGrid(a, false, edit, { edit = it }, Modifier.weight(1f).fillMaxWidth().padding(6.dp))
-                Rail(a, vertical = false)
+                val pg = page
+                if (pg != null) PageHost(pg, Modifier.weight(1f).fillMaxWidth())
+                else ModuleGrid(a, false, edit, { edit = it }, Modifier.weight(1f).fillMaxWidth().padding(6.dp))
+                Rail(a, vertical = false, page = page) { page = if (page == it) null else it }
             }
         }
     }
@@ -158,43 +164,45 @@ fun CardBox(modifier: Modifier, content: @Composable BoxScope.() -> Unit) {
 
 // ---------------------------------------------------------------- barra laterale / inferiore
 
-private class RailItem(val icon: ImageVector, val label: String, val onClick: () -> Unit)
+private class RailItem(val icon: ImageVector, val label: String, val key: String?, val onClick: () -> Unit)
 
 @Composable
-private fun Rail(a: DashActions, vertical: Boolean) {
+private fun Rail(a: DashActions, vertical: Boolean, page: String?, onPage: (String) -> Unit) {
     val c = LocalAuto.current
-    val ctx = LocalContext.current
-    val s = remember { CarSettings.get(ctx) }
     val items = listOf(
-        RailItem(Icons.Rounded.Navigation, "Navigatore") { Navigators.open(ctx, Navigators.byKey(s.navigator), null) },
-        RailItem(Icons.Rounded.Phone, "Telefono") { openDialer(ctx) },
-        RailItem(Icons.Rounded.MusicNote, "Musica") { openMusic(ctx) },
-        RailItem(Icons.Rounded.Apps, "App") { a.allApps() },
-        RailItem(Icons.Rounded.Dashboard, "Layout") { a.edit() },
-        RailItem(Icons.Rounded.Settings, "Impostazioni") { a.settings() }
+        RailItem(Icons.Rounded.Navigation, "Navigatore", "nav") { onPage("nav") },
+        RailItem(Icons.Rounded.Phone, "Telefono", "phone") { onPage("phone") },
+        RailItem(Icons.Rounded.MusicNote, "Musica", "music") { onPage("music") },
+        RailItem(Icons.Rounded.Apps, "App", "apps") { onPage("apps") },
+        RailItem(Icons.Rounded.Dashboard, "Layout", null) { a.edit() },
+        RailItem(Icons.Rounded.Settings, "Impostazioni", null) { a.settings() }
     )
     if (vertical) {
         Column(
             Modifier.width(88.dp).fillMaxHeight().background(c.rail).padding(vertical = 8.dp),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
-        ) { items.forEach { RailButton(it) } }
+        ) { items.forEach { RailButton(it, it.key != null && it.key == page) } }
     } else {
         Row(
             Modifier.fillMaxWidth().background(c.rail).padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
-        ) { items.forEach { RailButton(it) } }
+        ) { items.forEach { RailButton(it, it.key != null && it.key == page) } }
     }
 }
 
 @Composable
-private fun RailButton(item: RailItem) {
+private fun RailButton(item: RailItem, selected: Boolean) {
     val c = LocalAuto.current
     Column(
-        Modifier.clip(RoundedCornerShape(16.dp)).clickable { item.onClick() }.padding(horizontal = 6.dp, vertical = 8.dp),
+        Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (selected) c.accent.copy(alpha = 0.18f) else Color.Transparent)
+            .clickable { item.onClick() }
+            .padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(item.icon, item.label, tint = c.onCard, modifier = Modifier.size(30.dp))
+        Icon(item.icon, item.label, tint = if (selected) c.accent else c.onCard, modifier = Modifier.size(30.dp))
         Text(item.label, color = c.sub, fontSize = 11.sp, maxLines = 1)
     }
 }

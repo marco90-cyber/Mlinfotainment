@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.Sensors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -62,6 +63,7 @@ fun PermissionsPage(onBack: () -> Unit, title: String = "Permessi", footer: (@Co
     val notif = Build.VERSION.SDK_INT < 33 || granted(Manifest.permission.POST_NOTIFICATIONS)
     val bt = Build.VERSION.SDK_INT < 31 || granted(Manifest.permission.BLUETOOTH_CONNECT)
     val act = Build.VERSION.SDK_INT < 29 || granted(Manifest.permission.ACTIVITY_RECOGNITION)
+    val phoneOk = granted(Manifest.permission.READ_CONTACTS) && granted(Manifest.permission.READ_CALL_LOG) && granted(Manifest.permission.CALL_PHONE)
     val overlay = Settings.canDrawOverlays(ctx)
     val listener = MusicRepo.hasAccess(ctx)
     val split = SplitService.instance != null
@@ -107,6 +109,11 @@ fun PermissionsPage(onBack: () -> Unit, title: String = "Permessi", footer: (@Co
         MLGroup("Per il navigatore a fianco") {
             PermRow(Icons.Rounded.Layers, "Servizio schermo diviso", "Accessibilità: serve solo a dividere lo schermo", split) {
                 openSystem(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+        }
+        MLGroup("Per la pagina Telefono") {
+            PermRow(Icons.Rounded.Phone, "Contatti, chiamate recenti e chiamare", "Preferiti, recenti e chiamata diretta", phoneOk) {
+                launcher.launch(arrayOf(Manifest.permission.READ_CONTACTS, Manifest.permission.READ_CALL_LOG, Manifest.permission.CALL_PHONE))
             }
         }
         MLGroup("Per la musica") {
