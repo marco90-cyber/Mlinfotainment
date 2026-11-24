@@ -227,7 +227,7 @@ private fun NavCard(modifier: Modifier) {
                 Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         Modifier
-                            .weight(1.3f)
+                            .weight(1.6f)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(18.dp))
                             .background(c.accent)
@@ -240,7 +240,7 @@ private fun NavCard(modifier: Modifier) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             if (installed) nav.label else "${nav.label} non installato",
-                            color = c.onAccent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            color = c.onAccent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
@@ -443,6 +443,7 @@ private fun weatherInfo(code: Int?): Pair<String, ImageVector> = when (code) {
 
 @Composable
 private fun WeatherCard(modifier: Modifier) {
+    val ctx = LocalContext.current
     val c = LocalAuto.current
     val sp by SpeedRepo.state.collectAsState()
     val w by WeatherRepo.state.collectAsState()
@@ -451,7 +452,7 @@ private fun WeatherCard(modifier: Modifier) {
             val st = SpeedRepo.state.value
             val lat = st.lat
             val lon = st.lon
-            if (lat != null && lon != null) WeatherRepo.refresh(lat, lon)
+            if (lat != null && lon != null) WeatherRepo.refresh(ctx, lat, lon)
             delay(60_000L)
         }
     }

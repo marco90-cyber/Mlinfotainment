@@ -1,11 +1,14 @@
 package com.marco90.mlinfotainment.data
 
+import android.content.Context
+import android.location.Geocoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 data class WeatherState(
     val temp: Int? = null,
@@ -21,15 +24,18 @@ object WeatherRepo {
     val state = MutableStateFlow(WeatherState())
     private var lastFetch = 0L
 
-    suspend fun refresh(lat: Double, lon: Double) {
+    suspend fun refresh(ctx: Context, lat: Double, lon: Double) {
+        // la località si riprova a ogni giro finché non c'è; il meteo ogni 15 minuti
+        val place = withContext(Dispatchers.IO) { placeName(ctx, lat, lon) }
+        if (place != null && place != state.value.place) state.value = state.value.copy(place = place)
         val now = System.currentTimeMillis()
         if (now - lastFetch < 15 * 60_000L && state.value.temp != null) return
         lastFetch = now
         val result = withContext(Dispatchers.IO) {
-            try { fetch(lat, lon)?.copy(place = placeName(lat, lon)) } catch (e: Exception) { null }
+            try { fetch(lat, lon) } catch (e: Exception) { null }
         }
         if (result != null) {
-            state.value = result
+            state.value = result.copy(place = state.value.place)
         } else {
             lastFetch = 0L
             state.value = state.value.copy(failed = true)
@@ -40,9 +46,22 @@ object WeatherRepo {
     private var placeCache: String? = null
 
     /** Nome della località (città), da un servizio gratuito senza chiave; resta quello vecchio se non risponde. */
-    private fun placeName(lat: Double, lon: Double): String? {
+    private fun placeName(ctx: Context, lat: Double, lon: Double): String? {
         val key = "${Math.round(lat * 20)}:${Math.round(lon * 20)}"
         if (key == placeKey && placeCache != null) return placeCache
+        // prima il servizio del telefono, poi uno gratuito online
+        try {
+            if (Geocoder.isPresent()) {
+                @Suppress("DEPRECATION")
+                val a = Geocoder(ctx.applicationContext, Locale.getDefault()).getFromLocation(lat, lon, 1)?.firstOrNull()
+                val n = a?.locality ?: a?.subAdminArea ?: a?.adminArea
+                if (!n.isNullOrBlank()) {
+                    placeKey = key
+                    placeCache = n
+                    return n
+                }
+            }
+        } catch (e: Exception) { }
         return try {
             val url = URL(
                 "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it"
