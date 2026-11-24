@@ -48,7 +48,7 @@ fun SettingsHost(onClose: () -> Unit) {
         "modules" -> ModulesPage { page = "root" }
         "widgets" -> WidgetsPage { page = "root" }
         "signals" -> SignalsPage { page = "root" }
-        "perms" -> PermissionsPage { page = "root" }
+        "perms" -> PermissionsPage(onBack = { page = "root" })
         "probe" -> EmbedProbePage { page = "root" }
         else -> RootPage(onClose) { page = it }
     }
