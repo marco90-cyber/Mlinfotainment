@@ -212,41 +212,72 @@ private fun NavCard(modifier: Modifier) {
         EmbeddedNav(modifier, nav.pkg) { }
         return
     }
+    val goHome = {
+        if (s.homeAddress.isBlank()) toast(ctx, "Imposta l'indirizzo di casa nelle impostazioni")
+        else Navigators.open(ctx, nav, s.homeAddress)
+    }
+    val goWork = {
+        if (s.workAddress.isBlank()) toast(ctx, "Imposta l'indirizzo di lavoro nelle impostazioni")
+        else Navigators.open(ctx, nav, s.workAddress)
+    }
     CardBox(modifier) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(CircleShape).background(c.accent), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Navigation, null, tint = c.onAccent)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            if (maxHeight < 150.dp) {
+                // scheda bassa: tre pulsanti in fila
+                Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier
+                            .weight(1.6f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(c.accent)
+                            .clickable { Navigators.open(ctx, nav, null) }
+                            .padding(horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(Icons.Rounded.Navigation, null, tint = c.onAccent, modifier = Modifier.size(22.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (installed) nav.label else "${nav.label} non installato",
+                            color = c.onAccent, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    DestChip("Casa", Icons.Rounded.Home, Modifier.weight(1f).fillMaxHeight()) { goHome() }
+                    DestChip("Lavoro", Icons.Rounded.Work, Modifier.weight(1f).fillMaxHeight()) { goWork() }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text("Navigazione", color = c.onCard, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        if (installed) nav.label else "${nav.label} non installato",
-                        color = c.sub, fontSize = 14.sp
-                    )
-                }
-            }
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 64.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(c.accent)
-                    .clickable { Navigators.open(ctx, nav, null) }
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Apri ${nav.label}", color = c.onAccent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DestChip("Casa", Icons.Rounded.Home, Modifier.weight(1f)) {
-                    if (s.homeAddress.isBlank()) toast(ctx, "Imposta l'indirizzo di casa nelle impostazioni")
-                    else Navigators.open(ctx, nav, s.homeAddress)
-                }
-                DestChip("Lavoro", Icons.Rounded.Work, Modifier.weight(1f)) {
-                    if (s.workAddress.isBlank()) toast(ctx, "Imposta l'indirizzo di lavoro nelle impostazioni")
-                    else Navigators.open(ctx, nav, s.workAddress)
+            } else {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(44.dp).clip(CircleShape).background(c.accent), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Navigation, null, tint = c.onAccent)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Navigazione", color = c.onCard, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (installed) nav.label else "${nav.label} non installato",
+                                color = c.sub, fontSize = 14.sp
+                            )
+                        }
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 64.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(c.accent)
+                            .clickable { Navigators.open(ctx, nav, null) }
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Apri ${nav.label}", color = c.onAccent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DestChip("Casa", Icons.Rounded.Home, Modifier.weight(1f)) { goHome() }
+                        DestChip("Lavoro", Icons.Rounded.Work, Modifier.weight(1f)) { goWork() }
+                    }
                 }
             }
         }
@@ -258,7 +289,7 @@ private fun DestChip(label: String, icon: ImageVector, modifier: Modifier, onCli
     val c = LocalAuto.current
     Row(
         modifier
-            .heightIn(min = 52.dp)
+            .heightIn(min = 44.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(c.cardHigh)
             .clickable { onClick() }

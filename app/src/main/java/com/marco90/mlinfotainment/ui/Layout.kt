@@ -39,7 +39,7 @@ import kotlin.math.roundToInt
 private fun Modifier.longPressFirst(onLong: () -> Unit): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val up = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+        val up = withTimeoutOrNull(250L) {
             waitForUpOrCancellation(PointerEventPass.Initial)
         }
         if (up == null) {
@@ -152,19 +152,27 @@ private fun GridItem(
     var dh by remember { mutableFloatStateOf(0f) }
     val cur by rememberUpdatedState(cell)
     val oth by rememberUpdatedState(others)
+    val cwNow by rememberUpdatedState(cwPx)
+    val chNow by rememberUpdatedState(chPx)
+    val colsNow by rememberUpdatedState(cols)
+    val rowsNow by rememberUpdatedState(rows)
     val (minW, minH) = GridLayout.minSize(cell.key)
 
     fun target(): Cell {
         val k = cur
+        val cw = cwNow
+        val ch = chNow
+        val cl = colsNow
+        val rw = rowsNow
         return if (dw != 0f || dh != 0f) {
             k.copy(
-                w = (k.w + (dw / cwPx).roundToInt()).coerceIn(minW, maxOf(minW, cols - k.x)),
-                h = (k.h + (dh / chPx).roundToInt()).coerceIn(minH, maxOf(minH, rows - k.y))
+                w = (k.w + (dw / cw).roundToInt()).coerceIn(minW, maxOf(minW, cl - k.x)),
+                h = (k.h + (dh / ch).roundToInt()).coerceIn(minH, maxOf(minH, rw - k.y))
             )
         } else {
             k.copy(
-                x = (k.x + (dx / cwPx).roundToInt()).coerceIn(0, maxOf(0, cols - k.w)),
-                y = (k.y + (dy / chPx).roundToInt()).coerceIn(0, maxOf(0, rows - k.h))
+                x = (k.x + (dx / cw).roundToInt()).coerceIn(0, maxOf(0, cl - k.w)),
+                y = (k.y + (dy / ch).roundToInt()).coerceIn(0, maxOf(0, rw - k.h))
             )
         }
     }
