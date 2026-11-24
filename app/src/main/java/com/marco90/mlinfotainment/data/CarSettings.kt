@@ -51,6 +51,7 @@ class CarSettings private constructor(ctx: Context) {
     // nella versione "Sistema" parte spenta, per non aprirsi insieme alla versione normale
     var autoStart by bool("autoStart", !BuildConfig.SYSTEM_BUILD)
     var onboardingDone by bool("onboardingDone", false)
+    var lockMoving by bool("lockMoving", true)
     var sideBySide by bool("sideBySide", true)
     var embedNav by bool("embedNav", BuildConfig.SYSTEM_BUILD)
     var trigBt by bool("trigBt", true)

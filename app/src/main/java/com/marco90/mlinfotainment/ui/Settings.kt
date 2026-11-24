@@ -35,6 +35,7 @@ import com.marco.mltheme.MLSwitchRow
 import com.marco.mltheme.MLThemeSettingsGroup
 import com.marco90.mlinfotainment.BuildConfig
 import com.marco90.mlinfotainment.core.Triggers
+import com.marco90.mlinfotainment.core.UiRequests
 import com.marco90.mlinfotainment.embed.EmbedProbePage
 import com.marco90.mlinfotainment.data.CarSettings
 import com.marco90.mlinfotainment.data.Module
@@ -91,6 +92,7 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
             MLNavRow("Configurazione iniziale", "Rivedi permessi e prime scelte", icon = Icons.Rounded.Tune) { s.onboardingDone = false; onClose() }
         }
         MLGroup("Schermata") {
+            MLNavRow("Disposizione", "Sposta e ridimensiona moduli e widget", icon = Icons.Rounded.Dashboard) { UiRequests.edit = true; onClose() }
             MLNavRow("Moduli", "Cosa mostrare e in che ordine", icon = Icons.Rounded.Widgets) { go("modules") }
             MLNavRow("Widget", "Maps, Spotify e gli altri widget di sistema", icon = Icons.Rounded.Widgets) { go("widgets") }
             MLNavRow("App preferite", "Fino a 4, in grande", icon = Icons.Rounded.Apps) { showFav = true }
@@ -113,6 +115,10 @@ private fun RootPage(onClose: () -> Unit, go: (String) -> Unit) {
                 "Navigatore a fianco", "Divide lo schermo: schermata auto e navigatore affiancati",
                 s.sideBySide, icon = Icons.Rounded.Navigation
             ) { s.sideBySide = it }
+            MLSwitchRow(
+                "Blocca la tastiera in movimento", "Sopra 8 km/h: solo voce e pulsanti grandi",
+                s.lockMoving, icon = Icons.Rounded.Lock
+            ) { s.lockMoving = it }
             MLChoiceRow("Unità di velocità", listOf("kmh" to "km/h", "mph" to "mph"), s.unit) { s.unit = it }
             MLSwitchRow("Schermo sempre acceso", "Mentre guidi", s.keepOn) { s.keepOn = it }
             MLSwitchRow("Schermo intero", "Nasconde le barre di sistema", s.immersive) { s.immersive = it }

@@ -128,6 +128,7 @@ private fun NavPage() {
     val nav = Navigators.byKey(s.navigator)
     var query by remember { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
+    val locked = rememberMotionLocked()
 
     fun go(dest: String?) {
         if (!dest.isNullOrBlank()) s.pushRecent(dest)
@@ -150,6 +151,7 @@ private fun NavPage() {
                 if (s.workAddress.isBlank()) toast(ctx, "Imposta l'indirizzo di lavoro nelle impostazioni") else go(s.workAddress)
             }
         }
+        if (locked) LockedBanner("In movimento: per cambiare destinazione usa la voce, per esempio «vai a Palermo».") else {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = query, onValueChange = { query = it },
@@ -160,11 +162,12 @@ private fun NavPage() {
                 if (query.isNotBlank()) { go(query.trim()); query = "" }
             }
         }
+        }
         Text("Preferiti", color = c.sub, fontSize = 14.sp, modifier = Modifier.padding(start = 6.dp))
         s.places.forEachIndexed { i, (name, addr) ->
             PlaceRow(name, addr, Icons.Rounded.Star, onClick = { go(addr) }, onDelete = { s.removePlace(i) })
         }
-        BigButton("Aggiungi un preferito", Icons.Rounded.Add, Modifier.fillMaxWidth()) { adding = true }
+        if (!locked) BigButton("Aggiungi un preferito", Icons.Rounded.Add, Modifier.fillMaxWidth()) { adding = true }
         if (s.recents.isNotEmpty()) {
             Text("Recenti", color = c.sub, fontSize = 14.sp, modifier = Modifier.padding(start = 6.dp))
             s.recents.forEach { addr -> PlaceRow(addr, null, Icons.Rounded.History, onClick = { go(addr) }, onDelete = null) }
@@ -271,6 +274,7 @@ private fun PhonePage() {
     val ctx = LocalContext.current
     val c = LocalAuto.current
     var tab by remember { mutableIntStateOf(0) }
+    val locked = rememberMotionLocked()
     var tick by remember { mutableIntStateOf(0) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
 
@@ -282,7 +286,8 @@ private fun PhonePage() {
             Chip("Recenti", tab == 2) { tab = 2 }
         }
         if (tab == 0) {
-            DialPad(Modifier.weight(1f).fillMaxWidth())
+            if (locked) LockedBanner("In movimento: per chiamare usa la voce, per esempio «chiama Mario», oppure i Preferiti e i Recenti.")
+            else DialPad(Modifier.weight(1f).fillMaxWidth())
         } else {
             val perm = if (tab == 1) Manifest.permission.READ_CONTACTS else Manifest.permission.READ_CALL_LOG
             val ok = remember(tick, tab) { hasPerm(ctx, perm) }
@@ -486,10 +491,12 @@ private fun AppsPage() {
     val c = LocalAuto.current
     val apps = remember { loadApps(ctx) }
     var q by remember { mutableStateOf("") }
+    val locked = rememberMotionLocked()
     val shown = remember(q) { if (q.isBlank()) apps else apps.filter { it.label.contains(q.trim(), ignoreCase = true) } }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PageTitle(Icons.Rounded.Apps, "App")
-        OutlinedTextField(
+        if (locked) LockedBanner("In movimento: per aprire un'app usa la voce, per esempio «apri Spotify».")
+        else OutlinedTextField(
             value = q, onValueChange = { q = it }, label = { Text("Cerca un'app") },
             singleLine = true, colors = fieldColors(), modifier = Modifier.fillMaxWidth()
         )

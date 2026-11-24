@@ -35,6 +35,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.marco90.mlinfotainment.BuildConfig
 import com.marco90.mlinfotainment.core.Triggers
+import com.marco90.mlinfotainment.core.UiRequests
 import com.marco90.mlinfotainment.embed.EmbeddedNav
 import com.marco90.mlinfotainment.data.CarSettings
 import com.marco90.mlinfotainment.data.GridLayout
@@ -64,6 +65,13 @@ fun Dashboard(onOpenSettings: () -> Unit) {
     val modules = s.activeModules
     var edit by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(UiRequests.edit) {
+        if (UiRequests.edit) {
+            page = null
+            edit = true
+            UiRequests.edit = false
+        }
+    }
     var showAll by remember { mutableStateOf(false) }
     var showFav by remember { mutableStateOf(false) }
     var permTick by remember { mutableIntStateOf(0) }
@@ -169,12 +177,13 @@ private class RailItem(val icon: ImageVector, val label: String, val key: String
 @Composable
 private fun Rail(a: DashActions, vertical: Boolean, page: String?, onPage: (String) -> Unit) {
     val c = LocalAuto.current
+    val voice = rememberVoice()
     val items = listOf(
         RailItem(Icons.Rounded.Navigation, "Navigatore", "nav") { onPage("nav") },
         RailItem(Icons.Rounded.Phone, "Telefono", "phone") { onPage("phone") },
         RailItem(Icons.Rounded.MusicNote, "Musica", "music") { onPage("music") },
         RailItem(Icons.Rounded.Apps, "App", "apps") { onPage("apps") },
-        RailItem(Icons.Rounded.Dashboard, "Layout", null) { a.edit() },
+        RailItem(Icons.Rounded.Mic, "Voce", null) { voice() },
         RailItem(Icons.Rounded.Settings, "Impostazioni", null) { a.settings() }
     )
     if (vertical) {

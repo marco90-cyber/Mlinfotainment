@@ -1,7 +1,12 @@
 package com.marco90.mlinfotainment.media
 
 import android.content.ComponentName
+import android.app.SearchManager
 import android.content.Context
+import android.content.Intent
+import android.os.Bundle
+import android.provider.MediaStore
+import com.marco90.mlinfotainment.ui.toast
 import android.graphics.Bitmap
 import android.media.AudioManager
 import android.media.MediaMetadata
@@ -100,6 +105,31 @@ object MusicRepo {
     fun previous(ctx: Context) {
         val c = controller
         if (c != null) c.transportControls.skipToPrevious() else key(ctx, KeyEvent.KEYCODE_MEDIA_PREVIOUS)
+    }
+
+    fun pause(ctx: Context) {
+        val c = controller
+        if (c != null) c.transportControls.pause() else key(ctx, KeyEvent.KEYCODE_MEDIA_PAUSE)
+    }
+
+    fun resume(ctx: Context) {
+        val c = controller
+        if (c != null) c.transportControls.play() else key(ctx, KeyEvent.KEYCODE_MEDIA_PLAY)
+    }
+
+    /** "Metti X": lo chiede all'app musicale attiva (o a quella usata per ultima). */
+    fun playFromSearch(ctx: Context, q: String) {
+        val c = controller
+        if (c != null) {
+            c.transportControls.playFromSearch(q, Bundle())
+            return
+        }
+        val i = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
+            .putExtra(SearchManager.QUERY, q)
+            .putExtra(MediaStore.EXTRA_MEDIA_FOCUS, "vnd.android.cursor.item/*")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        state.value.pkg?.let { i.setPackage(it) }
+        try { ctx.startActivity(i) } catch (e: Exception) { toast(ctx, "Nessuna app musicale può farlo") }
     }
 
     private fun key(ctx: Context, code: Int) {
