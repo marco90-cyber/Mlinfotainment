@@ -467,10 +467,12 @@ private fun WeatherCard(modifier: Modifier) {
                     color = c.onCard, fontSize = 28.sp, fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    if (w.temp == null) (if (w.failed) "Meteo non disponibile" else "In attesa della posizione")
-                    else if (w.place != null) "$label · ${w.place}" else label,
+                    if (w.temp == null) (if (w.failed) "Meteo non disponibile" else "In attesa della posizione") else label,
                     color = c.sub, fontSize = 14.sp, maxLines = 1
                 )
+                if (w.temp != null && w.place != null) {
+                    Text(w.place ?: "", color = c.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
                 if (w.temp != null && w.place == null && !w.placeInfo.isNullOrBlank()) {
                     Text("Località: ${w.placeInfo}", color = c.sub, fontSize = 10.sp, maxLines = 2)
                 }
