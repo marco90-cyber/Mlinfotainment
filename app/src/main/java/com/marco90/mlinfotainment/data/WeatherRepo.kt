@@ -62,27 +62,46 @@ object WeatherRepo {
                 }
             }
         } catch (e: Exception) { }
-        return try {
-            val url = URL(
-                "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it"
-            )
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 6000
-            conn.readTimeout = 6000
-            try {
-                val j = JSONObject(conn.inputStream.bufferedReader().readText())
-                val name = j.optString("city").ifBlank { j.optString("locality") }.ifBlank { j.optString("principalSubdivision") }
-                if (name.isBlank()) placeCache else {
-                    placeKey = key
-                    placeCache = name
-                    name
-                }
-            } finally {
-                conn.disconnect()
-            }
-        } catch (e: Exception) {
-            placeCache
+        val name = osmName(lat, lon) ?: bigDataName(lat, lon)
+        if (name != null) {
+            placeKey = key
+            placeCache = name
         }
+        return name ?: placeCache
+    }
+
+    private fun getJson(u: String): JSONObject? = try {
+        val conn = URL(u).openConnection() as HttpURLConnection
+        conn.connectTimeout = 6000
+        conn.readTimeout = 6000
+        conn.setRequestProperty("User-Agent", "MLinfotainment/1.0 (Android)")
+        try {
+            JSONObject(conn.inputStream.bufferedReader().readText())
+        } finally {
+            conn.disconnect()
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun osmName(lat: Double, lon: Double): String? {
+        val j = getJson(
+            "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&accept-language=it&lat=$lat&lon=$lon"
+        ) ?: return null
+        val a = j.optJSONObject("address") ?: return null
+        for (k in listOf("city", "town", "village", "municipality", "hamlet", "suburb", "county")) {
+            val v = a.optString(k)
+            if (v.isNotBlank()) return v
+        }
+        return null
+    }
+
+    private fun bigDataName(lat: Double, lon: Double): String? {
+        val j = getJson(
+            "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it"
+        ) ?: return null
+        return j.optString("city").ifBlank { j.optString("locality") }.ifBlank { j.optString("principalSubdivision") }
+            .takeIf { it.isNotBlank() }
     }
 
     private fun fetch(lat: Double, lon: Double): WeatherState {
