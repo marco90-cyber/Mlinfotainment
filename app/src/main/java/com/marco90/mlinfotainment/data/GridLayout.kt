@@ -49,6 +49,24 @@ object GridLayout {
         return best
     }
 
+    /**
+     * Mette [moved] dove vuoi e sposta gli elementi che ci stanno sotto nel posto libero più vicino.
+     * Ritorna le celle cambiate (compresa [moved]), o null se non c'è spazio per tutti.
+     */
+    fun pushAside(moved: Cell, others: List<Cell>, cols: Int, rows: Int): List<Cell>? {
+        val fixed = others.filter { !overlap(it, moved) }.toMutableList()
+        val displaced = others.filter { overlap(it, moved) }
+            .sortedBy { (it.x - moved.x) * (it.x - moved.x) + (it.y - moved.y) * (it.y - moved.y) }
+        val result = mutableListOf(moved)
+        val blockers = (fixed + moved).toMutableList()
+        for (o in displaced) {
+            val spot = nearestFree(o, blockers, cols, rows) ?: return null
+            blockers += spot
+            result += spot
+        }
+        return result
+    }
+
     private fun clamp(c: Cell, cols: Int, rows: Int): Cell {
         val (mw, mh) = minSize(c.key)
         val w = c.w.coerceIn(mw, maxOf(mw, cols))

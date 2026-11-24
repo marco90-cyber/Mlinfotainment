@@ -12,6 +12,7 @@ data class WeatherState(
     val code: Int? = null,
     val min: Int? = null,
     val max: Int? = null,
+    val place: String? = null,
     val failed: Boolean = false
 )
 
@@ -25,13 +26,43 @@ object WeatherRepo {
         if (now - lastFetch < 15 * 60_000L && state.value.temp != null) return
         lastFetch = now
         val result = withContext(Dispatchers.IO) {
-            try { fetch(lat, lon) } catch (e: Exception) { null }
+            try { fetch(lat, lon)?.copy(place = placeName(lat, lon)) } catch (e: Exception) { null }
         }
         if (result != null) {
             state.value = result
         } else {
             lastFetch = 0L
             state.value = state.value.copy(failed = true)
+        }
+    }
+
+    private var placeKey = ""
+    private var placeCache: String? = null
+
+    /** Nome della località (città), da un servizio gratuito senza chiave; resta quello vecchio se non risponde. */
+    private fun placeName(lat: Double, lon: Double): String? {
+        val key = "${Math.round(lat * 20)}:${Math.round(lon * 20)}"
+        if (key == placeKey && placeCache != null) return placeCache
+        return try {
+            val url = URL(
+                "https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=$lat&longitude=$lon&localityLanguage=it"
+            )
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 6000
+            conn.readTimeout = 6000
+            try {
+                val j = JSONObject(conn.inputStream.bufferedReader().readText())
+                val name = j.optString("city").ifBlank { j.optString("locality") }.ifBlank { j.optString("principalSubdivision") }
+                if (name.isBlank()) placeCache else {
+                    placeKey = key
+                    placeCache = name
+                    name
+                }
+            } finally {
+                conn.disconnect()
+            }
+        } catch (e: Exception) {
+            placeCache
         }
     }
 

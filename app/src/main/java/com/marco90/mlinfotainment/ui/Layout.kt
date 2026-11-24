@@ -83,7 +83,10 @@ fun ModuleGrid(a: DashActions, landscape: Boolean, edit: Boolean, onEdit: (Boole
                     cols = cols, rows = rows, cwPx = cwPx, chPx = chPx,
                     edit = edit,
                     onEnterEdit = { onEdit(true) },
-                    onChange = { nc -> s.saveLayout(landscape, cells.map { if (it.key == nc.key) nc else it }) },
+                    onChange = { ch ->
+                        val m = ch.associateBy { it.key }
+                        s.saveLayout(landscape, cells.map { m[it.key] ?: it })
+                    },
                     onRemove = if (GridLayout.isWidget(cell.key)) ({
                         val id = cell.key.substring(2).toIntOrNull()
                         if (id != null) {
@@ -152,7 +155,7 @@ private fun GridItem(
     chPx: Float,
     edit: Boolean,
     onEnterEdit: () -> Unit,
-    onChange: (Cell) -> Unit,
+    onChange: (List<Cell>) -> Unit,
     onRemove: (() -> Unit)?,
     content: @Composable (Modifier) -> Unit
 ) {
@@ -169,8 +172,8 @@ private fun GridItem(
     val (minW, minH) = GridLayout.minSize(cell.key)
     val moving by remember { derivedStateOf { ds.active } }
 
-    /** Dove finirebbe l'elemento se lo lasciassi adesso (sempre su celle libere). */
-    fun landing(): Cell? {
+    /** Dove finirebbe l'elemento se lo lasciassi adesso e cosa si sposta per fargli posto. */
+    fun plan(): List<Cell>? {
         val k = cur
         val cw = cwNow
         val ch = chNow
@@ -181,12 +184,14 @@ private fun GridItem(
                 w = (k.w + (ds.dw / cw).roundToInt()).coerceIn(minW, maxOf(minW, cl - k.x)),
                 h = (k.h + (ds.dh / ch).roundToInt()).coerceIn(minH, maxOf(minH, rw - k.y))
             )
+            if (oth.none { GridLayout.overlap(it, t) }) return listOf(t)
+            GridLayout.pushAside(t, oth, cl, rw)?.let { return it }
             var w = t.w
             while (w >= minW) {
                 var h = t.h
                 while (h >= minH) {
                     val cand = t.copy(w = w, h = h)
-                    if (oth.none { GridLayout.overlap(it, cand) }) return cand
+                    if (oth.none { GridLayout.overlap(it, cand) }) return listOf(cand)
                     h--
                 }
                 w--
@@ -197,14 +202,18 @@ private fun GridItem(
             x = (k.x + (ds.dx / cw).roundToInt()).coerceIn(0, maxOf(0, cl - k.w)),
             y = (k.y + (ds.dy / ch).roundToInt()).coerceIn(0, maxOf(0, rw - k.h))
         )
-        return if (oth.none { GridLayout.overlap(it, t) }) t else GridLayout.nearestFree(t, oth, cl, rw)
+        if (oth.none { GridLayout.overlap(it, t) }) return listOf(t)
+        GridLayout.pushAside(t, oth, cl, rw)?.let { return it }
+        return GridLayout.nearestFree(t, oth, cl, rw)?.let { listOf(it) }
     }
 
+    fun landing(): Cell? = plan()?.firstOrNull()
+
     fun commit() {
-        val l = landing()
-        if (l != null && l != cur) {
+        val p = plan()
+        if (p != null && p.firstOrNull() != cur || (p?.size ?: 0) > 1) {
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onChange(l)
+            onChange(p!!)
         }
         ds.reset()
     }
